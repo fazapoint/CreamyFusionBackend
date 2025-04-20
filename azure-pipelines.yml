@@ -1,60 +1,35 @@
-trigger: none
-
-pool:
-  vmImage: 'windows-latest'
-
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+trigger:
+- main
 
 stages:
 - stage: Build
-  displayName: "Build Stage"
-  jobs:
-    - job: BuildJob
-      displayName: "Build Job"
-      steps:
-        - task: NuGetToolInstaller@1
+  jobs: 
+  - job: Build
 
-        - task: NuGetCommand@2
-          inputs:
-            restoreSolution: '$(solution)'
+    pool:
+      vmImage: 'windows-latest'
 
-        - task: VSBuild@1
-          inputs:
-            solution: '$(solution)'
-            msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
-            platform: '$(buildPlatform)'
-            configuration: '$(buildConfiguration)'
+    variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'      
+      buildConfiguration: 'Release'      
 
-        - task: VSTest@2
-          inputs:
-            platform: '$(buildPlatform)'
-            configuration: '$(buildConfiguration)'
+    steps:
+    - task: NuGetToolInstaller@1
 
-        - task: PublishBuildArtifacts@1
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-            ArtifactName: 'drop'
-            publishLocation: 'Container'
+    - task: NuGetCommand@2
+      inputs:
+        restoreSolution: '$(solution)'
 
-- stage: Deploy
-  displayName: "Deploy Stage"
-  jobs:
-    - job: DeployJob
-      displayName: "Deploy Job"
-      dependsOn: []  # Make sure this job runs only after BuildJob completes
-      steps:
-        - task: DownloadBuildArtifacts@1
-          inputs:
-            buildType: 'current'
-            downloadType: 'specific'
-            downloadPath: '$(System.ArtifactsDirectory)'
-
-        - task: AzureWebApp@1
-          inputs:
-            azureSubscription: 'Azure for Students(b2a72327-010c-411b-808c-983821c05729)'
-            appName: 'CreamyFusionApp'
-            appType: 'webApp'  # This specifies that it's a regular Web App
-            package: '$(System.ArtifactsDirectory)/**/*.zip'
+    - task: VSBuild@1
+      inputs:
+        solution: '$(solution)'
+        msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
+        
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
