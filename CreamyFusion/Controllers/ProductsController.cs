@@ -19,9 +19,21 @@ namespace CreamyFusion.Controllers
 
         // GET: api/products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
-            return await _context.Products.ToListAsync();
+            var productDtos = await _context.Products
+                .Select(p => new ProductDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    CurrentPrice = p.ProductPrices
+                        .Where(pp => pp.ValidTo > DateTime.UtcNow) // validto > todaytime
+                        .OrderByDescending(pp => pp.ValidTo) // most recent valid
+                        .Select(pp => pp.Price)
+                        .FirstOrDefault()
+                }).ToListAsync();
+
+            return Ok(productDtos);
         }
 
         // GET: api/products/5
