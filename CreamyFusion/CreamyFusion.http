@@ -1,0 +1,6 @@
+@CreamyFusion_HostAddress = http://localhost:5121
+
+GET {{CreamyFusion_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
