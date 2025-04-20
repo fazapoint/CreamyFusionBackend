@@ -27,7 +27,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000") // React app URL
+            policy.WithOrigins(
+                "http://localhost:3000",
+                "https://kind-rock-0c0897d00.6.azurestaticapps.net") // React app URL
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
