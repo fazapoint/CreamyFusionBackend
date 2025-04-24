@@ -103,12 +103,16 @@ namespace CreamyFusion.Controllers
         public async Task<IActionResult> DeleteProduct(Guid id)
         {
             var product = await _context.Products.FindAsync(id);
-            if (product == null)
+
+            if (product == null || product.Deleted)
             {
                 return NotFound();
             }
 
-            _context.Products.Remove(product);
+            product.Deleted = true;
+
+            // used if want to hard delete
+            //_context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
             return NoContent();
