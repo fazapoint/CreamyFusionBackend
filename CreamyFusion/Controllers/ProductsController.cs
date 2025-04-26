@@ -25,7 +25,6 @@ namespace CreamyFusion.Controllers
                 .AsNoTracking() // for read only operation no cached increase performance
                 .Select(p => new ProductResponseDto
                 {
-                    Id = p.Id,
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
                         .Where(pp => pp.ValidTo > DateTime.UtcNow) // validto > todaytime
@@ -47,7 +46,6 @@ namespace CreamyFusion.Controllers
                 .Where(p => p.Id == id)
                 .Select(p => new ProductResponseDto
                 {
-                    Id = p.Id,
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
                         .Where(pp => pp.ValidTo > DateTime.UtcNow)
@@ -66,17 +64,17 @@ namespace CreamyFusion.Controllers
 
         // POST: api/products
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(ProductInputDto productDto)
+        public async Task<ActionResult<Product>> CreateProduct(ProductInputDto inputPoductDto)
         {
             // Create a new product and map only the necessary properties
             var product = new Product
             {
-                Name = productDto.Name,
+                Name = inputPoductDto.Name,
                 ProductPrices = new List<ProductPrice>
                 {
                     new ProductPrice
                     {
-                        Price = productDto.InitialPrice,
+                        Price = inputPoductDto.Price,
                         ValidTo = DateTime.MaxValue
                     }
                 }
@@ -88,7 +86,6 @@ namespace CreamyFusion.Controllers
             // Create response with dto
             var responseDto = new ProductResponseDto
             {
-                Id = product.Id,
                 Name = product.Name,
                 CurrentPrice = product.ProductPrices.First().Price
             };
@@ -98,14 +95,36 @@ namespace CreamyFusion.Controllers
 
         // PUT: api/products/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduct(Guid id, Product product)
+        public async Task<IActionResult> UpdateProduct(Guid id, ProductInputDto inputProductDto)
         {
-            if (id != product.Id)
+            // get product by id
+            var product = await _context.Products
+                .Include(p => p.ProductPrices) // Include ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(product).State = EntityState.Modified;
+            // Update Name from DTO
+            product.Name = inputProductDto.Name;
+
+            // Find current active price
+            var currentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue);
+
+            if (currentPrice != null)
+            {
+                currentPrice.ValidTo = DateTime.UtcNow;
+            }
+            
+
+            product.ProductPrices.Add(new ProductPrice
+            {
+                Price = inputProductDto.Price,
+                ValidTo = DateTime.MaxValue
+            });
+
             await _context.SaveChangesAsync();
 
             return NoContent();
