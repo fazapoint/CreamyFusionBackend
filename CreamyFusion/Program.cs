@@ -37,6 +37,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();  // Force HTTP requests to redirect to HTTPS
+    app.UseHsts();  // HTTP Strict Transport Security (HSTS)
+}
+
 app.UseCors("AllowReactApp"); // Enable CORS here
 
 app.UseAuthorization();
