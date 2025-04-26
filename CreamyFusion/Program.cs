@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // config for split dev and prod database
 var environment = builder.Environment.EnvironmentName;
 
-if (environment == "Developmnent")
+if (environment == "Development")
 {
     builder.Configuration.AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true);
 }
