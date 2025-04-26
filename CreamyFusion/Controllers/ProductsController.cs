@@ -19,10 +19,11 @@ namespace CreamyFusion.Controllers
 
         // GET: api/products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts()
         {
             var productDtos = await _context.Products
-                .Select(p => new ProductDto
+                .AsNoTracking() // for read only operation no cached increase performance
+                .Select(p => new ProductResponseDto
                 {
                     Id = p.Id,
                     Name = p.Name,
@@ -38,17 +39,29 @@ namespace CreamyFusion.Controllers
 
         // GET: api/products/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(Guid id)
+        public async Task<ActionResult<ProductResponseDto>> GetProduct(Guid id)
         {
-            var product = await _context.Products.FindAsync(id);
-            // var product = await _context.Products.SingleOrDefaultAsync(p => p.Id == id);
+            // Include related data if needed (e.g., for prices)
+            var productDto = await _context.Products
+                .AsNoTracking() // for read only operation no cached increase performance
+                .Where(p => p.Id == id)
+                .Select(p => new ProductResponseDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    CurrentPrice = p.ProductPrices
+                        .Where(pp => pp.ValidTo > DateTime.UtcNow)
+                        .OrderByDescending(pp => pp.ValidTo)
+                        .Select(pp => pp.Price)
+                        .FirstOrDefault()
+                }).FirstOrDefaultAsync();
 
-            if (product == null)
+            if (productDto == null)
             {
                 return NotFound();
             }
 
-            return Ok(product);
+            return Ok(productDto);
         }
 
         // POST: api/products

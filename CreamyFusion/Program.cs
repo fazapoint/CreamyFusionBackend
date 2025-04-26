@@ -4,6 +4,18 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// config for split dev and prod database
+var environment = builder.Environment.EnvironmentName;
+
+if (environment == "Development")
+{
+    builder.Configuration.AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true);
+}
+else
+{
+    builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+}
+
 // get connection string from appsetting.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
