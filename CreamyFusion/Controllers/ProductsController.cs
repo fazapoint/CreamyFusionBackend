@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using CreamyFusion.Data;
 using CreamyFusion.Models;
 using CreamyFusion.DTOs;
+using Microsoft.Data.SqlClient;
 
 namespace CreamyFusion.Controllers
 {
@@ -65,36 +66,68 @@ namespace CreamyFusion.Controllers
 
         // POST: api/products
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(ProductInputDto inputPoductDto)
+        public async Task<ActionResult<Product>> CreateProduct(ProductInputDto inputProductDto)
         {
-            // Create a new product and map only the necessary properties
-            var product = new Product
+            try
             {
-                Name = inputPoductDto.Name,
-                ProductPrices = new List<ProductPrice>
+                // Create a new product and map only the necessary properties
+                var product = new Product
                 {
-                    new ProductPrice
-                    {
-                        Price = inputPoductDto.Price,
-                        ValidTo = DateTime.MaxValue
-                    }
-                }
-            };
-
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
-
-            // Create response with dto
-            var responseDto = new ProductResponseDto
+                    Name = inputProductDto.Name,
+                    ProductPrices = new List<ProductPrice>
             {
-                Name = product.Name,
-                CurrentPrice = product.ProductPrices.First().Price,
-                Message = $"ProductId: {product.Id} successfully added"
-               
-            };
+                new ProductPrice
+                {
+                    Price = inputProductDto.Price,
+                    ValidTo = DateTime.MaxValue
+                }
+            }
+                };
 
-            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, responseDto);
+                await _context.Products.AddAsync(product);
+                await _context.SaveChangesAsync();
+
+                // Create response with DTO
+                var responseDto = new ProductResponseDto
+                {
+                    Name = product.Name,
+                    CurrentPrice = product.ProductPrices.First().Price,
+                    Message = $"ProductId: {product.Id} successfully added"
+                };
+
+                return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, responseDto);
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Log or inspect the exception to check what the inner exception type is
+                var innerException = dbEx.InnerException as SqlException;
+                if (innerException != null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "An error occurred while saving the product (sql inner exception).",
+                        exceptionMessage = innerException.Message
+                    });
+                }
+
+                // In case it's not an SQL exception, return a generic DB update error
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while saving the product (not sql exception)",
+                    exceptionMessage = dbEx.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                // Catch any other general exception
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while adding the product (general exception)",
+                    exceptionMessage = ex.Message
+                });
+            }
         }
+
 
         // PUT: api/products/5
         [HttpPut("{id}")]
@@ -177,7 +210,8 @@ namespace CreamyFusion.Controllers
             var responseDto = new ProductResponseDto
             {
                 Name = product.Name,
-                CurrentPrice = product.ProductPrices.OrderByDescending(pp => pp.ValidTo).FirstOrDefault().Price,
+                // if currentprice is null then output 0
+                CurrentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue)?.Price ?? 0m,
                 Message = $"ProductId: {product.Id} successfully deleted"
             };
 
