@@ -27,6 +27,7 @@ namespace CreamyFusion.Controllers
                 .Where(p => !p.Deleted)
                 .Select(p => new ProductDto
                 {
+                    Id = p.Id,
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
                         .Where(pp => pp.ValidTo > DateTime.UtcNow) // validto > todaytime
@@ -48,6 +49,7 @@ namespace CreamyFusion.Controllers
                 .Where(p => p.Id == id && !p.Deleted)
                 .Select(p => new ProductDto
                 {
+                    Id= p.Id,
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
                         .Where(pp => pp.ValidTo > DateTime.UtcNow)
