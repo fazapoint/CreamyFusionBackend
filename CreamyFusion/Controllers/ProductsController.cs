@@ -19,11 +19,12 @@ namespace CreamyFusion.Controllers
 
         // GET: api/products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             var productDtos = await _context.Products
                 .AsNoTracking() // for read only operation no cached increase performance
-                .Select(p => new ProductResponseDto
+                .Where(p => !p.Deleted)
+                .Select(p => new ProductDto
                 {
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
@@ -38,13 +39,13 @@ namespace CreamyFusion.Controllers
 
         // GET: api/products/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProductResponseDto>> GetProduct(Guid id)
+        public async Task<ActionResult<ProductDto>> GetProduct(Guid id)
         {
             // Include related data if needed (e.g., for prices)
             var productDto = await _context.Products
                 .AsNoTracking() // for read only operation no cached increase performance
-                .Where(p => p.Id == id)
-                .Select(p => new ProductResponseDto
+                .Where(p => p.Id == id && !p.Deleted)
+                .Select(p => new ProductDto
                 {
                     Name = p.Name,
                     CurrentPrice = p.ProductPrices
@@ -87,7 +88,9 @@ namespace CreamyFusion.Controllers
             var responseDto = new ProductResponseDto
             {
                 Name = product.Name,
-                CurrentPrice = product.ProductPrices.First().Price
+                CurrentPrice = product.ProductPrices.First().Price,
+                Message = $"ProductId: {product.Id} successfully added"
+               
             };
 
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, responseDto);
@@ -100,7 +103,7 @@ namespace CreamyFusion.Controllers
             // get product by id
             var product = await _context.Products
                 .Include(p => p.ProductPrices) // Include ProductPrices
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && !p.Deleted);
 
             if (product == null)
             {
@@ -111,43 +114,74 @@ namespace CreamyFusion.Controllers
             product.Name = inputProductDto.Name;
 
             // Find current active price
-            var currentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue);
+            var currentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue && pp.Deleted == false);
 
             if (currentPrice != null)
             {
                 currentPrice.ValidTo = DateTime.UtcNow;
             }
-            
 
-            product.ProductPrices.Add(new ProductPrice
+            // new ProductPrice
+            var newProductPrice = new ProductPrice
             {
+                ProductId = id,
                 Price = inputProductDto.Price,
                 ValidTo = DateTime.MaxValue
-            });
+            };
+
+            // Insert into ProductPrices
+            _context.ProductPrices.Add(newProductPrice);
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var responseDto = new ProductResponseDto
+            {
+                Name = product.Name,
+                CurrentPrice = inputProductDto.Price,
+                Message = $"ProductId: {product.Id} successfully updated"
+            };
+
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, responseDto);
         }
 
         // DELETE: api/products/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(Guid id)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products
+                .Include(p => p.ProductPrices)
+                .FirstOrDefaultAsync(p => p.Id == id && !p.Deleted);
 
-            if (product == null || product.Deleted)
+            if (product == null)
             {
                 return NotFound();
             }
 
+            // set deleted true for Products table
             product.Deleted = true;
+
+            foreach (var productprices in product.ProductPrices)
+            {
+                // set max validto to current time
+                if (productprices.ValidTo == DateTime.MaxValue){
+                    productprices.ValidTo = DateTime.UtcNow;
+                }
+                // set all ProductPrices deleted true
+                productprices.Deleted = true;
+            }
 
             // used if want to hard delete
             //_context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var responseDto = new ProductResponseDto
+            {
+                Name = product.Name,
+                CurrentPrice = product.ProductPrices.OrderByDescending(pp => pp.ValidTo).FirstOrDefault().Price,
+                Message = $"ProductId: {product.Id} successfully deleted"
+            };
+
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, responseDto);
         }
     }   
 }

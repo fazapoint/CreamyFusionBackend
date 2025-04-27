@@ -16,5 +16,6 @@
     {
         public string Name { get; set; }
         public decimal CurrentPrice { get; set; }
+        public string Message {  get; set; }
     }
 }
