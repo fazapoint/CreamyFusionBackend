@@ -190,6 +190,9 @@ namespace CreamyFusion.Controllers
                 return NotFound();
             }
 
+            // get currentprice before updated
+            var currentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue);
+
             // set deleted true for Products table
             product.Deleted = true;
 
@@ -211,7 +214,7 @@ namespace CreamyFusion.Controllers
             {
                 Name = product.Name,
                 // if currentprice is null then output 0
-                CurrentPrice = product.ProductPrices.FirstOrDefault(pp => pp.ValidTo == DateTime.MaxValue)?.Price ?? 0m,
+                CurrentPrice = currentPrice?.Price ?? 0m,
                 Message = $"ProductId: {product.Id} successfully deleted"
             };
 
