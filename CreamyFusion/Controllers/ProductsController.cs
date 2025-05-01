@@ -208,6 +208,11 @@ namespace CreamyFusion.Controllers
                 productprices.Deleted = true;
             }
 
+            // Explicitly mark the entity as modified to trigger the Modified timestamp update
+            _context.Entry(product).State = EntityState.Modified;
+            // But preserve the Created date (don't update it)
+            _context.Entry(product).Property(p => p.Created).IsModified = false;
+
             // used if want to hard delete
             //_context.Products.Remove(product);
             await _context.SaveChangesAsync();

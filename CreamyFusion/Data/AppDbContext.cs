@@ -14,9 +14,60 @@ namespace CreamyFusion.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductPrice> ProductPrices { get; set; }
 
+        // Set base entity for updates modified or created column on every tables
+        public override int SaveChanges()
+        {
+            UpdateTimestamps();
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            UpdateTimestamps();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void UpdateTimestamps()
+        {
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.Entity is BaseEntity && (
+                    e.State == EntityState.Added ||
+                    e.State == EntityState.Modified));
+
+            foreach (var entry in entries)
+            {
+                var entity = (BaseEntity)entry.Entity;
+
+                if (entry.State == EntityState.Added)
+                {
+                    entity.Created = DateTime.UtcNow;
+                }
+
+                entity.Modified = DateTime.UtcNow;
+            }
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Configure common properties for all entities that inherit from BaseEntity
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                .Where(t => t.ClrType.IsSubclassOf(typeof(BaseEntity))))
+            {
+                modelBuilder.Entity(entityType.ClrType, builder =>
+                {
+                    builder.Property(nameof(BaseEntity.Created))
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .IsRequired();
+
+                    builder.Property(nameof(BaseEntity.Modified))
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .IsRequired();
+                });
+            }
 
             modelBuilder.Entity<Product>(entity =>
             {
