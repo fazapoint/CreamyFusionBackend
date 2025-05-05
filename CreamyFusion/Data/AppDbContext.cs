@@ -13,6 +13,7 @@ namespace CreamyFusion.Data
         // DbSets represent tables in your database
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductPrice> ProductPrices { get; set; }
+        public DbSet<Customer> Customers { get; set; }
 
         // Set base entity for updates modified or created column on every tables
         public override int SaveChanges()
@@ -76,13 +77,36 @@ namespace CreamyFusion.Data
                 .WithOne(pp => pp.Product)        // Each ProductPrice belongs to one Product
                 .HasForeignKey(pp => pp.ProductId); // Foreign key is ProductId
 
-                // set column name
+                // set column name setting
                 entity.Property(p => p.Name)
                 .IsRequired()
                 .HasMaxLength(100);
 
                 // set name unique across product table (single column)
                 entity.HasIndex(p => p.Name)
+                .IsUnique();
+            });
+
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.Property(c => c.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+                entity.Property(c => c.PhoneNumber)
+                .IsRequired()
+                .HasMaxLength(20);
+
+                // Set gender into string column in sql server
+                entity.Property(c => c.Gender)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+
+                entity.Property(c => c.Point)
+                .HasDefaultValue(0);
+
+                // set unique value for phonenumber
+                entity.HasIndex(c => c.PhoneNumber)
                 .IsUnique();
             });
 
