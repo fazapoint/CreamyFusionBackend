@@ -77,13 +77,13 @@ namespace CreamyFusion.Controllers
                 {
                     Name = inputProductDto.Name,
                     ProductPrices = new List<ProductPrice>
-            {
-                new ProductPrice
-                {
-                    Price = inputProductDto.Price,
-                    ValidTo = DateTime.MaxValue
-                }
-            }
+                    {
+                        new ProductPrice
+                        {
+                            Price = inputProductDto.Price,
+                            ValidTo = DateTime.MaxValue
+                        }
+                    }
                 };
 
                 await _context.Products.AddAsync(product);
